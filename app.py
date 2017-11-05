@@ -34,8 +34,6 @@ import json
 from flask import request, Response
 import ast
 
-from functools import wraps
-
 # Create application
 app = Flask(__name__, static_folder='files')
 
@@ -217,7 +215,6 @@ class MyAdminIndexView(admin.AdminIndexView):
     def logout_view(self):
         login.logout_user()
         return redirect(url_for('.index'))
-    
 
 
 # Create category model
@@ -297,7 +294,6 @@ class Drinksetting(db.Model):
     dir_pro_id = db.Column(db.Integer, db.ForeignKey('product.pro_id'))
     product = db.relationship('Products', backref='drinksetting')
     dri_ports = db.Column(db.String(200))
-    dri_description = db.Column(db.String(200))    
     dri_datetime = db.Column(db.DateTime)
     dri_price = db.Column(db.Float)
     dri_logo = db.Column(db.Unicode(128), nullable=False)
@@ -313,7 +309,6 @@ class Mixsetting(db.Model):
     product = db.relationship('Products', backref='mixsetting')
     mis_mix_id = db.Column(db.Integer, db.ForeignKey('mix.mix_id'))
     mixset = db.relationship('Mixs', backref='mixsetting')
-    mis_description = db.Column(db.String(200))    
     mis_ports = db.Column(db.String(200),nullable=False)
     mis_pins = db.Column(db.String(200),nullable=False)
     mis_datetime = db.Column(db.DateTime)
@@ -331,7 +326,6 @@ class Sodasetting(db.Model):
     sod_mix_id = db.Column(db.Integer, db.ForeignKey('mix.mix_id'))
     mixset = db.relationship('Mixs', backref='sodasetting')
     sod_pins = db.Column(db.String(200),nullable=False)
-    sod_description = db.Column(db.String(200))    
     sod_datetime = db.Column(db.DateTime)
     sod_price = db.Column(db.Float)
     sod_logo = db.Column(db.Unicode(128), nullable=False)
@@ -465,7 +459,6 @@ class ProductAdmin(sqla.ModelView):
                          productstatus="Status",
                          pro_datetime = "Date updated" )
     form_columns = ['pro_name', 'pro_name','pro_desc','pro_logo','productstatus','pro_datetime']
-    column_exclude_list = ('pro_logo')
 
     def _list_thumbnail(view, context, model, pro_logo):
         if not model.pro_logo:
@@ -496,7 +489,6 @@ class MixtAdmin(sqla.ModelView):
     form_excluded_columns = ('mix_id')
     column_labels = dict(mix_name='Product Name', mix_desc='Description', mix_logo='Logo',productstatus="Status", mix_datetime = "Date updated")
     form_columns = ['mix_name', 'mix_name','mix_desc','mix_logo','productstatus','mix_datetime']
-    column_exclude_list = ('mix_logo')
 
     def _list_thumbnail(view, context, model, mix_logo):
         if not model.mix_logo:
@@ -525,8 +517,8 @@ class DrinksettinAdmin(sqla.ModelView):
     # can_create = False
     # can_delete = False
     # can_edit = False
-    # form_excluded_columns = ('dri_id')
-    column_labels = dict(product='Booze Name', dri_ports='Router Ports', dri_datetime = "Date updated", dri_price = 'Price', dri_logo = 'Logo',dri_description = 'Description')
+    form_excluded_columns = ('dri_id')
+    column_labels = dict(product='Booze Name', dri_ports='Router Ports', dri_datetime = "Date updated", dri_price = 'Price', dri_logo = 'Logo')
     # form_columns = ['product','dri_ports', 'dri_datetime']
     column_exclude_list = ('dri_ports')
 
@@ -559,7 +551,7 @@ class MixsettingAdmin(sqla.ModelView):
     #can_delete = False
     #can_edit = False
     form_excluded_columns = ('mis_id','mis_ports','mis_pins')
-    column_labels = dict(product='Booze', mixset='Mix Set',mis_ports="Router Ports", mis_pins="Mix Pins",mis_datetime='Datetime of update', mis_price = 'Price', mis_logo = 'Logo', mis_description = 'Description')
+    column_labels = dict(product='Booze', mixset='Mix Set',mis_ports="Router Ports", mis_pins="Mix Pins",mis_datetime='Datetime of update', mis_price = 'Price', mis_logo = 'Logo')
     # form_columns = ['product','mixset','mis_ports','mis_pins', 'mis_datetime']
     column_exclude_list = ('mis_ports','mis_pins')
 
@@ -591,7 +583,7 @@ class SodasettingAdmin(sqla.ModelView):
     #can_delete = False
     #can_edit = False
     form_excluded_columns = ('sod_id')
-    column_labels = dict(mixset='Soda', sod_pins="Soda Pins",sod_datetime='Datetime of update', sod_price = 'Price', sod_logo = 'Logo', sod_description = 'Description')
+    column_labels = dict(mixset='Soda', sod_pins="Soda Pins",sod_datetime='Datetime of update', sod_price = 'Price', sod_logo = 'Logo')
     # form_columns = ['mixset','sod_pins', 'sod_datetime']
     column_exclude_list = ('sod_pins')
 
@@ -769,24 +761,46 @@ admin.add_view(MyModelView(User, db.session))
 admin.add_view(SettingAdmin(Settings,db.session, 'General Setting'))
 admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 
-
 # Add links with categories
 #admin.add_link(MenuLink(name='General Setting', category='Settings', url='http://192.168.1.124:5000/admin/settings/'))
 #admin.add_link(MenuLink(name='Booze Settng', category='Settings', url='http://192.168.1.124:5000/admin/drinksetting/'))
 #admin.add_link(MenuLink(name='Mix Setting', category='Settings', url='http://192.168.1.124:5000/admin/mixsetting/'))
 
 #Test route
-@app.route('/api/test')
+@app.route('/api/test', methods=['POST'])
 def test():
-    global router1
-    global router2
 
-    blob = [router1+'booze75=30&booze63=30&booze70=30&', router2+'booze74=30&booze69=30&']
-    ms = (grequests.get(u) for u in blob)
-    grequests.map(ms)
-    print(blob)
+    drinkid = int(request.json['drinkid'])
+    drinktype = int(request.json['type']) 
 
-    return router1
+    drink_desc = ""
+    drink_logo = "http://192.168.1.125:5000/files/"
+    drink_price = 0
+
+    result = ""
+    #if(drinktype == 1){
+    #}
+
+    if drinktype == 2:
+        mixlist = Mixsetting.query.filter_by(mis_id=drinkid).first()
+        drink_desc = "VODKA + PEPSI"
+        drink_logo = drink_logo+"1200px-Smirnoff.svg_thumb.png"
+        drink_price = 10
+
+    result = str(drinkid)+","+drink_desc+","+drink_logo+","+str(drink_price)
+
+    #if(drinktype == 3){
+    #}
+    
+    #global router1
+    #global router2
+
+    #blob = [router1+'booze75=30&booze63=30&booze70=30&', router2+'booze74=30&booze69=30&']
+    #ms = (grequests.get(u) for u in blob)
+    #grequests.map(ms)
+    #print(blob)
+
+    return Response(json.dumps(result),  mimetype='application/json')
 
 
 #API's 
@@ -1258,4 +1272,4 @@ if __name__ == '__main__':
     db.create_all()
 
     # Start app
-    app.run(host='192.168.1.124', port=5000, debug=True)
+    app.run(host='192.168.1.131', port=5000, debug=True)
