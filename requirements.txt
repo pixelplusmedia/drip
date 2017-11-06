@@ -1,0 +1,6 @@
+Flask
+Flask-Admin
+Flask-SQLAlchemy
+flask_login
+grequests
+numpy
