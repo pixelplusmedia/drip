@@ -5,3 +5,4 @@ flask_login
 grequests
 numpy
 flask_httpauth
+Flask-Security
