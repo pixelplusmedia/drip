@@ -4,12 +4,15 @@ import os.path as op
 import sqlite3
 
 from flask import Flask, url_for, g, redirect, render_template, request
+from flask_httpauth import HTTPTokenAuth
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.event import listens_for
 
 from wtforms import form, fields, validators
 import flask_admin as admin
 import flask_login as login
+from flask_login import current_user
 
 from flask_admin import helpers, expose
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -36,8 +39,19 @@ import ast
 
 from functools import wraps
 
+from flask.ext.login import AnonymousUserMixin
+
+
 # Create application
 app = Flask(__name__, static_folder='files')
+
+authenticate = HTTPTokenAuth(scheme='Token')
+
+tokens = {
+
+    "f34e190a0fad8882e727dcf1c0da922b": "DRIP AUTH"
+
+}
 
 # Create dummy secrey key so we can use sessions
 app.config['SECRET_KEY'] = 'fcBih@f~zD^/UF"=Y5XoVXrLa&7.>W{:L!g87I,xNRk17)Lm$X5{XrR]h(u:MsU'
@@ -89,6 +103,21 @@ def getSetting():
         print('Server unable to fetch data')
         return
 
+
+
+
+@authenticate.verify_token
+def verify_token(token):
+
+    if token in tokens:
+
+        g.current_user = tokens[token]
+
+        return True
+
+    return False
+
+
 # Create user model.
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -96,7 +125,8 @@ class User(db.Model):
     last_name = db.Column(db.String(100))
     login = db.Column(db.String(80), unique=True)
     email = db.Column(db.String(120))
-    password = db.Column(db.String(64))
+    password = db.Column(db.String(120))
+    role = db.Column(db.String(80))
 
     # Flask-Login integration
     def is_authenticated(self):
@@ -114,6 +144,9 @@ class User(db.Model):
     # Required for administrative interface
     def __unicode__(self):
         return self.username
+
+    def get_urole(self):
+            return self.role
 
 
 # Define login and registration forms (for flask-login)
@@ -152,6 +185,9 @@ class RegistrationForm(form.Form):
 def init_login():
     login_manager = login.LoginManager()
     login_manager.init_app(app)
+    from flask.ext.security import AnonymousUser
+    login_manager.anonymous_user = AnonymousUser
+    login_manager.anonymous_user.role = 'GUEST'
 
     # Create user loader function
     @login_manager.user_loader
@@ -162,10 +198,12 @@ def init_login():
 # Create customized model view class
 class MyModelView(sqla.ModelView):
     can_create = False
-    can_edit = False
+    can_edit = True
+    column_exclude_list = ('role')
 
     def is_accessible(self):
-        return login.current_user.is_authenticated
+        if login.current_user.role == 'ADMIN':
+            return login.current_user.is_authenticated
 
 
 # Create customized index view class that handles login & registration
@@ -217,7 +255,8 @@ class MyAdminIndexView(admin.AdminIndexView):
     def logout_view(self):
         login.logout_user()
         return redirect(url_for('.index'))
-    
+
+
 
 
 # Create category model
@@ -596,7 +635,8 @@ class SodasettingAdmin(sqla.ModelView):
     column_exclude_list = ('sod_pins')
 
     def is_accessible(self):
-        return login.current_user.is_authenticated
+        if login.current_user.role == 'ADMIN' or login.current_user.role == 'BARTENDER':
+            return login.current_user.is_authenticated
 
     def _list_thumbnail(view, context, model, sod_logo):
         if not model.sod_logo:
@@ -751,6 +791,7 @@ def index():
 # Initialize flask-login
 init_login()
 
+
 # Create admin
 admin = admin.Admin(app, name='Drip Admin',index_view=MyAdminIndexView(), base_template='my_master.html')
 #admin.add_view(CategoryAdmin(Category, db.session))
@@ -777,6 +818,7 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 
 #Test route
 @app.route('/api/test')
+@authenticate.login_required
 def test():
     global router1
     global router2
@@ -791,6 +833,7 @@ def test():
 
 #API's 
 @app.route('/api/runrefill', methods=['POST'])
+@authenticate.login_required
 def runrefill():
     global router2
     global rf1Volume
@@ -828,6 +871,7 @@ def runrefill():
 
 # Satation Status
 @app.route('/api/stationstatus')
+@authenticate.login_required
 def stationstatus():
     result = 0
     emptylist = []
@@ -850,6 +894,7 @@ def stationstatus():
 
 # Station Update
 @app.route('/api/stationupdate', methods=['POST'])
+@authenticate.login_required
 def stationupdate():
     result = "failed"
     # bay 1,2,3
@@ -880,6 +925,7 @@ def stationupdate():
 
 # Dispenser runner
 @app.route('/api/rundispense', methods=['POST'])
+@authenticate.login_required
 def rundispense():
     result = "failed"
     boozelistid = int(request.json['boozelistid'])
@@ -922,6 +968,7 @@ def rundispense():
 
 # Process 
 @app.route('/api/processlist')
+@authenticate.login_required
 def processlist():
     result = ''
 
@@ -956,6 +1003,7 @@ def processlist():
 
 # Order checker
 @app.route('/api/checkorders')
+@authenticate.login_required
 def checkorders():
 
     status = Userapproval.query.filter_by(uss_prs_id=11).all()
@@ -965,6 +1013,7 @@ def checkorders():
 
 # Order checker
 @app.route('/api/setting')
+@authenticate.login_required
 def sodasetting():
     res = []
     setting = Settings.query.filter_by(set_id=1).first()
@@ -985,6 +1034,7 @@ def sodasetting():
 
 # Order Approval
 @app.route('/api/approveorder', methods=['POST'])
+@authenticate.login_required
 def approveorder():
 
     #status = request.data
@@ -1011,6 +1061,7 @@ def approveorder():
     
 #API's 
 @app.route('/api/process', methods=['POST'])
+@authenticate.login_required
 def process():
 
     global router1
