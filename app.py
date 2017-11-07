@@ -438,6 +438,7 @@ class Orderlists(db.Model):
     orl_volume = db.Column(db.Integer)
     orl_group_id = db.Column(db.Integer)
     orl_with_mix = db.Column(db.Integer, nullable=False)
+    orl_price = db.Column(db.Float)
     orl_datetime = db.Column(db.DateTime)
 
     def is_accessible(self):
@@ -675,9 +676,10 @@ class OrderListAdmin(sqla.ModelView):
                         mix='Mix',
                         orl_volume='Volume',
                         orl_qt='Quantity',
+                        orl_price='Total Amount',
                         orl_with_mix='With Mix 0 = No, 1 =mix , 2 = soda',
                         orl_datetime='Data of update')
-    form_columns = ['order','product','mix','orl_volume','orl_qt','orl_with_mix','orl_datetime']
+    form_columns = ['order','product','mix','orl_volume','orl_qt','orl_price','orl_with_mix','orl_datetime']
 
     def is_accessible(self):
         return login.current_user.is_authenticated
@@ -817,19 +819,80 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 #admin.add_link(MenuLink(name='Mix Setting', category='Settings', url='http://192.168.1.124:5000/admin/mixsetting/'))
 
 #Test route
-@app.route('/api/test')
+@app.route('/api/test', methods=['POST'])
 @authenticate.login_required
 def test():
-    global router1
-    global router2
+    drinkid = int(request.json['drinkid'])
+    drinktype = int(request.json['type']) 
 
-    blob = [router1+'booze75=30&booze63=30&booze70=30&', router2+'booze74=30&booze69=30&']
-    ms = (grequests.get(u) for u in blob)
-    grequests.map(ms)
-    print(blob)
+    drink_desc = ""
+    drink_logo = "http://192.168.1.125:5000/files/"
+    drink_price = 0
 
-    return router1
+    result = ""
+    #if(drinktype == 1){
+    #}
 
+    if drinktype == 2:
+        mixlist = Mixsetting.query.filter_by(mis_id=drinkid).first()
+        drink_desc = "VODKA + PEPSI"
+        drink_logo = drink_logo+"1200px-Smirnoff.svg_thumb.png"
+        drink_price = 10
+
+    result = str(drinkid)+","+drink_desc+","+drink_logo+","+str(drink_price)
+
+    return result
+
+@app.route('/api/getorderlist', methods=['POST'])
+@authenticate.login_required
+def getorderlist():
+    userid = int(request.json['temp_userid'])
+
+    orderlist = Orderlists.query.filter_by(orl_orl_id=userid).all()
+
+
+    booze_id = 0
+    mix_id = 0
+    drink_id = 0
+    drink_desc = ""
+    drink_qt = ""
+    drink_price = 0
+    result = "failed"
+    orderlist_id = 0
+    
+    if len(orderlist)>0:
+
+        ordList = []
+        for olist in orderlist:
+
+            drink_qt = olist.orl_qt
+            drink_price = olist.orl_price
+            orderlist_id = olist.orl_id
+
+            if olist.orl_with_mix == 0:
+                booze_id = olist.orl_pro_id
+                desc = Drinksetting.query.filter_by(dir_pro_id=booze_id).first()
+                drink_desc = desc.dri_description
+                drink_id = desc.dri_id
+            if olist.orl_with_mix == 1:
+                booze_id = olist.orl_pro_id
+                mix_id = olist.orl_mix_id
+                desc = Mixsetting.query.filter_by(mis_pro_id=booze_id).filter_by(mis_mix_id=mix_id).first()
+                drink_desc = desc.mis_description
+                drink_id = desc.mis_id
+            if olist.orl_with_mix == 2:
+                mix_id = olist.orl_mix_id
+                desc = Sodasetting.query.filter_by(sod_mix_id=mix_id).first()
+                drink_desc = desc.sod_description
+                drink_id = desc.sod_id
+
+            ordList.append(str(orderlist_id)+":"+drink_desc+":"+str(drink_qt)+":"+str(drink_price))
+        print(ordList)
+
+        ordlistTotext = str(ordList).replace('"','').replace('[','').replace(']','').replace("'",'')
+        #result = "1,test,5,20"
+    return ordlistTotext
+    #return result
 
 #API's 
 @app.route('/api/runrefill', methods=['POST'])
@@ -1309,4 +1372,4 @@ if __name__ == '__main__':
     db.create_all()
 
     # Start app
-    app.run(host='192.168.1.124', port=5000, debug=True)
+    app.run(host='192.168.1.131', port=5000, debug=True)
