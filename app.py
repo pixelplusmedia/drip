@@ -340,6 +340,7 @@ class Drinksetting(db.Model):
     dri_datetime = db.Column(db.DateTime)
     dri_price = db.Column(db.Float)
     dri_logo = db.Column(db.Unicode(128), nullable=False)
+    dri_doubleprice = db.Column(db.Float)
 
     def is_accessible(self):
         return login.current_user.is_authenticated
@@ -358,6 +359,7 @@ class Mixsetting(db.Model):
     mis_datetime = db.Column(db.DateTime)
     mis_price = db.Column(db.Float)
     mis_logo = db.Column(db.Unicode(128), nullable=False)
+    mis_doubleprice = db.Column(db.Float)
 
 
     def is_accessible(self):
@@ -566,7 +568,7 @@ class DrinksettinAdmin(sqla.ModelView):
     # can_delete = False
     # can_edit = False
     # form_excluded_columns = ('dri_id')
-    column_labels = dict(product='Booze Name', dri_ports='Router Ports', dri_datetime = "Date updated", dri_price = 'Price', dri_logo = 'Logo',dri_description = 'Description')
+    column_labels = dict(product='Booze Name', dri_ports='Router Ports', dri_datetime = "Date updated", dri_price = 'Price', dri_logo = 'Logo',dri_description = 'Description', dri_doubleprice = 'Double Shot Price')
     # form_columns = ['product','dri_ports', 'dri_datetime']
     column_exclude_list = ('dri_ports')
 
@@ -599,7 +601,7 @@ class MixsettingAdmin(sqla.ModelView):
     #can_delete = False
     #can_edit = False
     form_excluded_columns = ('mis_id','mis_ports','mis_pins')
-    column_labels = dict(product='Booze', mixset='Mix Set',mis_ports="Router Ports", mis_pins="Mix Pins",mis_datetime='Datetime of update', mis_price = 'Price', mis_logo = 'Logo', mis_description = 'Description')
+    column_labels = dict(product='Booze', mixset='Mix Set',mis_ports="Router Ports", mis_pins="Mix Pins",mis_datetime='Datetime of update', mis_price = 'Price', mis_logo = 'Logo', mis_description = 'Description', mis_doubleprice = 'Double Shot Price')
     # form_columns = ['product','mixset','mis_ports','mis_pins', 'mis_datetime']
     column_exclude_list = ('mis_ports','mis_pins')
 
@@ -1372,4 +1374,4 @@ if __name__ == '__main__':
     db.create_all()
 
     # Start app
-    app.run(host='192.168.1.131', port=5000, debug=True)
+    app.run(host='192.168.1.124', port=5000, debug=True)
