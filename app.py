@@ -47,6 +47,8 @@ app = Flask(__name__, static_folder='files')
 
 authenticate = HTTPTokenAuth(scheme='Token')
 
+serverIP = "192.168.1.131"
+
 tokens = {
 
     "f34e190a0fad8882e727dcf1c0da922b": "DRIP AUTH"
@@ -820,6 +822,36 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 #admin.add_link(MenuLink(name='Booze Settng', category='Settings', url='http://192.168.1.124:5000/admin/drinksetting/'))
 #admin.add_link(MenuLink(name='Mix Setting', category='Settings', url='http://192.168.1.124:5000/admin/mixsetting/'))
 
+
+# Mix Drink Details
+@app.route('/api/mixdrinkslist', methods=['POST'])
+@authenticate.login_required
+def mixdrinkslist():
+
+    drinktype = int(request.json['drinktype'])
+    getMixlist = []
+    getBoozeList = []
+
+    resultToText = ""
+
+    if drinktype == 0:
+        dringklist = Drinksetting.query.all()
+
+        for drin in dringklist :
+            getBoozeList.append(str(drin.dri_id)+":"+drin.dri_logo+":"+str(0))
+            
+        resultToText = str(getBoozeList).replace('"','').replace('[','').replace(']','').replace("'",'')
+
+    if drinktype == 1:
+        mixlist = Mixsetting.query.all()
+
+        for mix in mixlist :
+            getMixlist.append(str(mix.mis_id)+":"+mix.mis_logo+":"+str(1))
+
+        resultToText = str(getMixlist).replace('"','').replace('[','').replace(']','').replace("'",'')
+
+    return resultToText
+
 #Drink details route
 @app.route('/api/drinkdetails', methods=['POST'])
 @authenticate.login_required
@@ -828,16 +860,18 @@ def drinkdetails():
     drinktype = int(request.json['type']) 
 
     drink_desc = ""
-    drink_logo = "http://192.168.1.131:5000/files/"
+    drink_logo = "http://"+serverIP+":5000/files/"
     drink_price = 0.0
+    drink_price_double = 0.0
 
     result = ""
     if drinktype == 0:
         print(1)
-        booze = Drinksetting.query.filter_by(dir_id=drinkid).first()
+        booze = Drinksetting.query.filter_by(dri_id=drinkid).first()
         drink_desc = booze.dri_description
-        drink_logo = booze+mixlist.dir_logo
+        drink_logo = drink_logo+booze.dri_logo
         drink_price = booze.dri_price
+        drink_price_double = booze.dri_doubleprice
 
     if drinktype == 1:
         print(2)
@@ -845,6 +879,7 @@ def drinkdetails():
         drink_desc = mixlist.mis_description
         drink_logo = drink_logo+mixlist.mis_logo
         drink_price = mixlist.mis_price
+        drink_price_double = mixlist.mis_doubleprice
 
     if drinktype == 2:
         print(3)
@@ -853,7 +888,7 @@ def drinkdetails():
         drink_logo = drink_logo+soda.sod_logo
         drink_price = soda.sod_price       
 
-    result = str(drinkid)+","+drink_desc+","+drink_logo+","+str(drink_price)
+    result = str(drinkid)+","+drink_desc+","+drink_logo+","+str(drink_price)+","+str(drink_price_double)
 
     return result
 
@@ -916,9 +951,8 @@ def saveorders():
     drinktype = int(request.json['type'])
     singleqt = int(request.json['singleqt'])
     doubleqt = int(request.json['doubleqt'])
-    singleprice = int(request.json['singleprice'])
-    doubleprice = int(request.json['doubleprice'])
-
+    singleprice = float(request.json['singleprice'])
+    doubleprice = float(request.json['doubleprice'])
     now = datetime.now()
 
     #Get Volume
@@ -940,7 +974,7 @@ def saveorders():
 
             if drinktype == 0 :
                 # Get ID's
-                booze = Drinksetting.query.filter_by(dir_id=drinkid).first()
+                booze = Drinksetting.query.filter_by(dri_id=drinkid).first()
                 pro_id = booze.dri_pro_id
 
                 ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * singleqt ,orl_datetime=now)
@@ -1012,7 +1046,7 @@ def saveorders():
             
             if drinktype == 0 :
                 # Get ID's
-                booze = Drinksetting.query.filter_by(dir_id=drinkid).first()
+                booze = Drinksetting.query.filter_by(dri_id=drinkid).first()
                 pro_id = booze.dri_pro_id
 
                 ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_qt=doubleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * doubleqt,orl_datetime=now)
@@ -1566,4 +1600,4 @@ if __name__ == '__main__':
     db.create_all()
 
     # Start app
-    app.run(host='192.168.1.131', port=5000, debug=True)
+    app.run(host=serverIP, port=5000, debug=True)
