@@ -48,9 +48,7 @@ app = Flask(__name__, static_folder='files')
 authenticate = HTTPTokenAuth(scheme='Token')
 
 tokens = {
-
     "f34e190a0fad8882e727dcf1c0da922b": "DRIP AUTH"
-
 }
 
 # Create dummy secrey key so we can use sessions
@@ -255,8 +253,6 @@ class MyAdminIndexView(admin.AdminIndexView):
     def logout_view(self):
         login.logout_user()
         return redirect(url_for('.index'))
-
-
 
 
 # Create category model
@@ -818,26 +814,54 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 #admin.add_link(MenuLink(name='Booze Settng', category='Settings', url='http://192.168.1.124:5000/admin/drinksetting/'))
 #admin.add_link(MenuLink(name='Mix Setting', category='Settings', url='http://192.168.1.124:5000/admin/mixsetting/'))
 
-#Test route
-@app.route('/api/test', methods=['POST'])
+
+@app.route('/api/test')
 @authenticate.login_required
 def test():
+
+    qt = 7
+    trans = qt / 2
+    ans = int(trans)
+
+    remaining =  ans - 2
+
+    for x in range(0,ans) :
+        print(x)
+
+    return str(remaining)
+
+#Drink details route
+@app.route('/api/drinkdetails', methods=['POST'])
+@authenticate.login_required
+def drinkdetails():
     drinkid = int(request.json['drinkid'])
     drinktype = int(request.json['type']) 
 
     drink_desc = ""
-    drink_logo = "http://192.168.1.125:5000/files/"
-    drink_price = 0
+    drink_logo = "http://192.168.1.131:5000/files/"
+    drink_price = 0.0
 
     result = ""
-    #if(drinktype == 1){
-    #}
+    if drinktype == 0:
+        print(1)
+        booze = Drinksetting.query.filter_by(dir_id=drinkid).first()
+        drink_desc = booze.dri_description
+        drink_logo = booze+mixlist.dir_logo
+        drink_price = booze.dri_price
+
+    if drinktype == 1:
+        print(2)
+        mixlist = Mixsetting.query.filter_by(mis_id=drinkid).first()
+        drink_desc = mixlist.mis_description
+        drink_logo = drink_logo+mixlist.mis_logo
+        drink_price = mixlist.mis_price
 
     if drinktype == 2:
-        mixlist = Mixsetting.query.filter_by(mis_id=drinkid).first()
-        drink_desc = "VODKA + PEPSI"
-        drink_logo = drink_logo+"1200px-Smirnoff.svg_thumb.png"
-        drink_price = 10
+        print(3)
+        soda = Sodasetting.query.filter_by(sod_id=drinkid).first()
+        drink_desc = soda.sod_description
+        drink_logo = drink_logo+soda.sod_logo
+        drink_price = soda.sod_price       
 
     result = str(drinkid)+","+drink_desc+","+drink_logo+","+str(drink_price)
 
@@ -849,7 +873,6 @@ def getorderlist():
     userid = int(request.json['temp_userid'])
 
     orderlist = Orderlists.query.filter_by(orl_orl_id=userid).all()
-
 
     booze_id = 0
     mix_id = 0
@@ -894,7 +917,189 @@ def getorderlist():
     return ordlistTotext
     #return result
 
+
 #API's 
+@app.route('/api/saveorders', methods=['POST'])
+@authenticate.login_required
+def saveorders():
+
+    userid = int(request.json['userid'])
+    drinkid = int(request.json['drinkid'])
+    drinktype = int(request.json['type'])
+    singleqt = int(request.json['singleqt'])
+    doubleqt = int(request.json['doubleqt'])
+    singleprice = int(request.json['singleprice'])
+    doubleprice = int(request.json['doubleprice'])
+
+    now = datetime.now()
+
+    #Get Volume
+    setting = Settings.query.first()
+    singleshot = setting.set_single_shot_volume
+    doubleshot = setting.set_double_shot_volume
+
+    result = "failed"
+    user = Orders.query.filter_by(ord_id=userid).filter_by(pro_prs_id=12).all()
+
+    try:
+        if len(user) < 1:
+            ins = Orders(ord_customer_name="Temporary Name",pro_prs_id=12,ord_datetime=now)
+            db.session.add(ins)
+            db.session.commit()
+
+        # single
+        if singleqt > 0 :
+
+            if drinktype == 0 :
+                # Get ID's
+                booze = Drinksetting.query.filter_by(dir_id=drinkid).first()
+                pro_id = booze.dri_pro_id
+
+                ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * singleqt ,orl_datetime=now)
+                db.session.add(ins)
+                db.session.commit()
+
+            if drinktype == 1 :
+                # Get ID's
+                mix = Mixsetting.query.filter_by(mis_id=drinkid).first()
+                pro_id = mix.mis_pro_id
+                mix_id = mix.mis_mix_id
+
+                if singleqt > 2 :
+
+                    row = singleqt / 2
+                    row_len = int(row)
+
+                    for x in range(0,row_len) :
+                        ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=2,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * 2,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+
+                    remaining = singleqt - (2*row_len)
+
+                    if remaining > 0:
+                        ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=remaining,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * remaining,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+                    
+                else :
+                    ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * singleqt,orl_datetime=now)
+                    db.session.add(ins)
+                    db.session.commit()
+
+            if drinktype == 2 :
+                # Get ID's
+                mix = Sodasetting.query.filter_by(sod_id=drinkid).first()
+                mix_id = mix.sod_mix_id
+
+                #ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice,orl_datetime=now)
+                #db.session.add(ins)
+                #db.session.commit()   
+
+                if singleqt > 2 :
+
+                    row = singleqt / 2
+                    row_len = int(row)
+
+                    for x in range(0,row_len) :
+                        ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=2,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * 2,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+
+                    remaining = singleqt - (2*row_len)
+
+                    if remaining > 0:
+                        ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=remaining,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * remaining,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+                    
+                else :
+                    ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * singleqt,orl_datetime=now)
+                    db.session.add(ins)
+                    db.session.commit()          
+
+
+        # double
+        if doubleqt > 0 :
+            
+            if drinktype == 0 :
+                # Get ID's
+                booze = Drinksetting.query.filter_by(dir_id=drinkid).first()
+                pro_id = booze.dri_pro_id
+
+                ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_qt=doubleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * doubleqt,orl_datetime=now)
+                db.session.add(ins)
+                db.session.commit()
+
+            if drinktype == 1 :
+                # Get ID's
+                mix = Mixsetting.query.filter_by(mis_id=drinkid).first()
+                pro_id = mix.mis_pro_id
+                mix_id = mix.mis_mix_id
+                
+                #ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=doubleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice,orl_datetime=now)
+                #db.session.add(ins)
+                #db.session.commit()
+                if doubleqt > 2 :
+
+                    row = doubleqt / 2
+                    row_len = int(row)
+
+                    for x in range(0,row_len) :
+                        ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=2,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * 2,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+
+                    remaining = singleqt - (2*row_len)
+
+                    if remaining > 0:
+                        ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=remaining,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * remaining,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+                    
+                else :
+                        ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_mix_id=mix_id,orl_qt=doubleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * doubleqt,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+
+
+            if drinktype == 2 :
+                # Get ID's
+                mix = Sodasetting.query.filter_by(sod_id=drinkid).first()
+                mix_id = mix.sod_mix_id
+
+                #ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=doubleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleshot,orl_datetime=now)
+                #db.session.add(ins)
+                #db.session.commit()
+                if doubleqt > 2 :
+
+                    row = singleqt / 2
+                    row_len = int(row)
+
+                    for x in range(0,row_len) :
+                        ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=2,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * 2,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+
+                    remaining = singleqt - (2*row_len)
+
+                    if remaining > 0:
+                        ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=remaining,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * remaining,orl_datetime=now)
+                        db.session.add(ins)
+                        db.session.commit()
+                    
+                else :
+                    ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=singleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * doubleqt,orl_datetime=now)
+                    db.session.add(ins)
+                    db.session.commit()
+        
+        result = "success"
+    except:
+        result = "failed"
+
+    return result
+
+
 @app.route('/api/runrefill', methods=['POST'])
 @authenticate.login_required
 def runrefill():
