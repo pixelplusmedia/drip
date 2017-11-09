@@ -48,7 +48,9 @@ app = Flask(__name__, static_folder='files')
 authenticate = HTTPTokenAuth(scheme='Token')
 
 tokens = {
+
     "f34e190a0fad8882e727dcf1c0da922b": "DRIP AUTH"
+
 }
 
 # Create dummy secrey key so we can use sessions
@@ -255,6 +257,8 @@ class MyAdminIndexView(admin.AdminIndexView):
         return redirect(url_for('.index'))
 
 
+
+
 # Create category model
 class Category(db.Model):
     __tablename__ = 'category'
@@ -336,6 +340,7 @@ class Drinksetting(db.Model):
     dri_datetime = db.Column(db.DateTime)
     dri_price = db.Column(db.Float)
     dri_logo = db.Column(db.Unicode(128), nullable=False)
+    dri_doubleprice = db.Column(db.Float)
 
     def is_accessible(self):
         return login.current_user.is_authenticated
@@ -354,6 +359,7 @@ class Mixsetting(db.Model):
     mis_datetime = db.Column(db.DateTime)
     mis_price = db.Column(db.Float)
     mis_logo = db.Column(db.Unicode(128), nullable=False)
+    mis_doubleprice = db.Column(db.Float)
 
 
     def is_accessible(self):
@@ -562,7 +568,7 @@ class DrinksettinAdmin(sqla.ModelView):
     # can_delete = False
     # can_edit = False
     # form_excluded_columns = ('dri_id')
-    column_labels = dict(product='Booze Name', dri_ports='Router Ports', dri_datetime = "Date updated", dri_price = 'Price', dri_logo = 'Logo',dri_description = 'Description')
+    column_labels = dict(product='Booze Name', dri_ports='Router Ports', dri_datetime = "Date updated", dri_price = 'Price', dri_logo = 'Logo',dri_description = 'Description', dri_doubleprice = 'Double Shot Price')
     # form_columns = ['product','dri_ports', 'dri_datetime']
     column_exclude_list = ('dri_ports')
 
@@ -595,7 +601,7 @@ class MixsettingAdmin(sqla.ModelView):
     #can_delete = False
     #can_edit = False
     form_excluded_columns = ('mis_id','mis_ports','mis_pins')
-    column_labels = dict(product='Booze', mixset='Mix Set',mis_ports="Router Ports", mis_pins="Mix Pins",mis_datetime='Datetime of update', mis_price = 'Price', mis_logo = 'Logo', mis_description = 'Description')
+    column_labels = dict(product='Booze', mixset='Mix Set',mis_ports="Router Ports", mis_pins="Mix Pins",mis_datetime='Datetime of update', mis_price = 'Price', mis_logo = 'Logo', mis_description = 'Description', mis_doubleprice = 'Double Shot Price')
     # form_columns = ['product','mixset','mis_ports','mis_pins', 'mis_datetime']
     column_exclude_list = ('mis_ports','mis_pins')
 
@@ -814,22 +820,6 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 #admin.add_link(MenuLink(name='Booze Settng', category='Settings', url='http://192.168.1.124:5000/admin/drinksetting/'))
 #admin.add_link(MenuLink(name='Mix Setting', category='Settings', url='http://192.168.1.124:5000/admin/mixsetting/'))
 
-
-@app.route('/api/test')
-@authenticate.login_required
-def test():
-
-    qt = 7
-    trans = qt / 2
-    ans = int(trans)
-
-    remaining =  ans - 2
-
-    for x in range(0,ans) :
-        print(x)
-
-    return str(remaining)
-
 #Drink details route
 @app.route('/api/drinkdetails', methods=['POST'])
 @authenticate.login_required
@@ -917,8 +907,6 @@ def getorderlist():
     return ordlistTotext
     #return result
 
-
-#API's 
 @app.route('/api/saveorders', methods=['POST'])
 @authenticate.login_required
 def saveorders():
@@ -1100,6 +1088,7 @@ def saveorders():
     return result
 
 
+#API's 
 @app.route('/api/runrefill', methods=['POST'])
 @authenticate.login_required
 def runrefill():
