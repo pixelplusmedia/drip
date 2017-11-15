@@ -824,6 +824,15 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 
 
 # Mix Drink Details
+@app.route('/api/requestuserid')
+@authenticate.login_required
+def requestuserid():
+    getUserID = Orders.query.order_by(Orders.ord_id.desc()).limit(1).first()
+    userID = getUserID.ord_id + 1
+
+    return str(userID)
+
+# Mix Drink Details
 @app.route('/api/mixdrinkslist', methods=['POST'])
 @authenticate.login_required
 def mixdrinkslist():
@@ -831,6 +840,7 @@ def mixdrinkslist():
     drinktype = int(request.json['drinktype'])
     getMixlist = []
     getBoozeList = []
+    getSosaList = []
 
     resultToText = ""
 
@@ -849,6 +859,14 @@ def mixdrinkslist():
             getMixlist.append(str(mix.mis_id)+":"+mix.mis_logo+":"+str(1))
 
         resultToText = str(getMixlist).replace('"','').replace('[','').replace(']','').replace("'",'')
+
+    if drinktype == 2:
+        sodalist = Sodasetting.query.all()
+
+        for soda in sodalist :
+            getSosaList.append(str(soda.sod_id)+":"+soda.sod_logo+":"+str(2))
+
+        resultToText = str(getSosaList).replace('"','').replace('[','').replace(']','').replace("'",'')
 
     return resultToText
 
@@ -955,6 +973,13 @@ def saveorders():
     doubleprice = float(request.json['doubleprice'])
     now = datetime.now()
 
+    print(userid)
+    print(drinkid)
+    print(drinktype)
+    print(singleqt)
+    print(singleprice)
+    print(doubleprice)
+    
     #Get Volume
     setting = Settings.query.first()
     singleshot = setting.set_single_shot_volume
@@ -971,11 +996,10 @@ def saveorders():
 
         # single
         if singleqt > 0 :
-
             if drinktype == 0 :
                 # Get ID's
                 booze = Drinksetting.query.filter_by(dri_id=drinkid).first()
-                pro_id = booze.dri_pro_id
+                pro_id = booze.dir_pro_id
 
                 ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice * singleqt ,orl_datetime=now)
                 db.session.add(ins)
@@ -1014,10 +1038,6 @@ def saveorders():
                 mix = Sodasetting.query.filter_by(sod_id=drinkid).first()
                 mix_id = mix.sod_mix_id
 
-                #ins = Orderlists(orl_orl_id=userid,orl_mix_id=mix_id,orl_qt=singleqt,orl_volume=singleshot,orl_with_mix=drinktype,orl_price=singleprice,orl_datetime=now)
-                #db.session.add(ins)
-                #db.session.commit()   
-
                 if singleqt > 2 :
 
                     row = singleqt / 2
@@ -1047,7 +1067,7 @@ def saveorders():
             if drinktype == 0 :
                 # Get ID's
                 booze = Drinksetting.query.filter_by(dri_id=drinkid).first()
-                pro_id = booze.dri_pro_id
+                pro_id = booze.dir_pro_id
 
                 ins = Orderlists(orl_orl_id=userid,orl_pro_id=pro_id,orl_qt=doubleqt,orl_volume=doubleshot,orl_with_mix=drinktype,orl_price=doubleprice * doubleqt,orl_datetime=now)
                 db.session.add(ins)
