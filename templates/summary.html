@@ -25,21 +25,18 @@
         text-align: left;
     }
 
+    caption {
+        font-size: 30px;
+        padding: 20px;
+        font-weight: bold;
+    }
+
 </style>
 
 <body>
-    <p>This works</p>
-<!-- 
-    {% for user in myuser %}
-    <li>{{ user.email }}</li>
-    {% endfor %}
-
-    {% for order in myorder %}
-    <li>{{ order.ord_customer_name }}</li>
-    {% endfor %} -->
 
     <table>
-        <caption>Summary</caption>
+        <caption>SUMMARY</caption>
         <tr>
             <th>Name</th>
             <th>Order Number</th> 
@@ -48,7 +45,8 @@
             <th>Quantity</th>
             <th>Volume</th>
             <th>Total Amount</th>         
-        </tr>
+        </tr>  
+        {% set totalamount = [0] %}
         {% for orderlist in myorderlist %}
         {% if orderlist.order.ord_customer_name == customer_name %}
         <tr>
@@ -59,9 +57,14 @@
             <td>{{ orderlist.orl_qt }}</td>
             <td>{{ orderlist.orl_volume }}</td>
             <td>{{ orderlist.orl_price }}</td>
+            {% set _ = totalamount.append(totalamount.pop() + orderlist.orl_price|float) %}
         </tr>
         {% endif %}
         {% endfor %}
+        <tr>
+            <td>Total Amount</td>
+            <td>{{ totalamount[0] }}</td>
+        </tr>
     </table>
 </body>
 </html>
