@@ -47,7 +47,7 @@ app = Flask(__name__, static_folder='files')
 
 authenticate = HTTPTokenAuth(scheme='Token')
 
-serverIP = "192.168.1.124"
+serverIP = "192.168.1.104"
 
 tokens = {
 
@@ -821,6 +821,17 @@ admin.add_view(UserapprovalAdmin(Userapproval,db.session, 'User Status'))
 #admin.add_link(MenuLink(name='General Setting', category='Settings', url='http://192.168.1.124:5000/admin/settings/'))
 #admin.add_link(MenuLink(name='Booze Settng', category='Settings', url='http://192.168.1.124:5000/admin/drinksetting/'))
 #admin.add_link(MenuLink(name='Mix Setting', category='Settings', url='http://192.168.1.124:5000/admin/mixsetting/'))
+
+#For the customer summary
+@app.route('/api/summary')
+def summary():
+    customer_name = "Test"
+    myuser = User.query.filter_by(login="admin").all()
+    myorder = Orders.query.all()
+    myorderlist = Orderlists.query.all()
+    myproduct = Products.query.all()
+    return render_template('summary.html', myuser=myuser, myorder=myorder, 
+        myorderlist=myorderlist, myproduct=myproduct, customer_name=customer_name)
 
 
 # Mix Drink Details

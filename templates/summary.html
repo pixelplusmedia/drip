@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+</head>
+
+<style>
+    table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+
+    table {
+        border-spacing: 5px;
+        width:100%; 
+        border: 1px solid black;
+    }
+
+    th, td {
+        padding: 10px;
+    }
+
+    th {
+        text-align: left;
+    }
+
+</style>
+
+<body>
+    <p>This works</p>
+<!-- 
+    {% for user in myuser %}
+    <li>{{ user.email }}</li>
+    {% endfor %}
+
+    {% for order in myorder %}
+    <li>{{ order.ord_customer_name }}</li>
+    {% endfor %} -->
+
+    <table>
+        <caption>Summary</caption>
+        <tr>
+            <th>Name</th>
+            <th>Order Number</th> 
+            <th>Date and Time</th>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Volume</th>
+            <th>Total Amount</th>         
+        </tr>
+        {% for orderlist in myorderlist %}
+        {% if orderlist.order.ord_customer_name == customer_name %}
+        <tr>
+            <td>{{ orderlist.order.ord_customer_name }}</td>
+            <td>{{ orderlist.order.ord_id }}</td>
+            <td>{{ orderlist.orl_datetime }}</td>
+            <td>{{ orderlist.product.pro_desc}}</td>
+            <td>{{ orderlist.orl_qt }}</td>
+            <td>{{ orderlist.orl_volume }}</td>
+            <td>{{ orderlist.orl_price }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+</body>
+</html>
